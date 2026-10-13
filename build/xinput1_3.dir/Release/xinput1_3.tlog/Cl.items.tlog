@@ -1,0 +1,6 @@
+C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\src\proxy\dllmain.cpp;C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\build\xinput1_3.dir\Release\dllmain.obj
+C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\src\proxy\config.cpp;C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\build\xinput1_3.dir\Release\config.obj
+C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\src\proxy\xinput_proxy.cpp;C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\build\xinput1_3.dir\Release\xinput_proxy.obj
+C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\src\proxy\window_hooks.cpp;C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\build\xinput1_3.dir\Release\window_hooks.obj
+C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\src\proxy\file_redirect.cpp;C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\build\xinput1_3.dir\Release\file_redirect.obj
+C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\src\proxy\d3d_hooks.cpp;C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\build\xinput1_3.dir\Release\d3d_hooks.obj

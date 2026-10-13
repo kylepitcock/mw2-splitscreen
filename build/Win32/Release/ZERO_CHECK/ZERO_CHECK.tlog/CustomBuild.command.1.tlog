@@ -1,0 +1,10 @@
+^C:\USERS\KYLEB\DOCUMENTS\PROJECTS\MW2 SPLITSCREEN\BUILD\CMAKEFILES\667DA39AB03C681BA86C1ADDC2D25EB0\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" "-SC:/Users/Kyleb/Documents/Projects/mw2 splitscreen" "-BC:/Users/Kyleb/Documents/Projects/mw2 splitscreen/build" --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file "C:/Users/Kyleb/Documents/Projects/mw2 splitscreen/build/mw2_splitscreen.sln"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

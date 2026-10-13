@@ -1,0 +1,4 @@
+C:/Users/Kyleb/Documents/Projects/mw2 splitscreen/build/CMakeFiles/minhook.dir
+C:/Users/Kyleb/Documents/Projects/mw2 splitscreen/build/CMakeFiles/xinput1_3.dir
+C:/Users/Kyleb/Documents/Projects/mw2 splitscreen/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/Kyleb/Documents/Projects/mw2 splitscreen/build/CMakeFiles/ZERO_CHECK.dir
