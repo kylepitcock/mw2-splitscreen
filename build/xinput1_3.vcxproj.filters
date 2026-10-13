@@ -1,22 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\src\proxy\dllmain.cpp">
+    <ClCompile Include="C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\src\mod\dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\src\proxy\config.cpp">
+    <ClCompile Include="C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\src\mod\util.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\src\proxy\xinput_proxy.cpp">
+    <ClCompile Include="C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\src\mod\splitscreen.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\src\proxy\window_hooks.cpp">
+    <ClCompile Include="C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\src\mod\loopback.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\src\proxy\file_redirect.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\src\proxy\d3d_hooks.cpp">
+    <ClCompile Include="C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\src\mod\xinput_proxy.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -24,7 +21,7 @@
     <CustomBuild Include="C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\src\proxy\xinput1_3.def">
+    <None Include="C:\Users\Kyleb\Documents\Projects\mw2 splitscreen\src\mod\xinput1_3.def">
       <Filter>Source Files</Filter>
     </None>
   </ItemGroup>
