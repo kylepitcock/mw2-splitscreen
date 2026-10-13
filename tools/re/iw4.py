@@ -199,3 +199,29 @@ def callees(db, fn):
         if t.startswith("call 0x"):
             out.append((a, int(t[5:], 16)))
     return out
+
+
+_WRITE_RE = None
+
+
+def abs_writes(db, fn, depth=2, seen=None):
+    """Absolute data addresses written by fn and its callees (to `depth`)."""
+    import re as _re
+    global _WRITE_RE
+    if _WRITE_RE is None:
+        _WRITE_RE = _re.compile(r"^(mov|add|sub|or|and|xor|inc|dec|movss|movsd|fstp|fistp|movq|movdqa|movdqu|movaps|movups|stos\w*|lock \w+|xchg)\b.*?(?:byte|word|dword|qword|xmmword|tbyte) ptr \[([^\]]*)\],")
+    seen = seen if seen is not None else set()
+    if fn in seen:
+        return set()
+    seen.add(fn)
+    out = set()
+    for a, t in db.insns(fn):
+        m = _WRITE_RE.match(t)
+        if m:
+            for h in _re.findall(r"0x([0-9a-f]{6,8})", m.group(2)):
+                v = int(h, 16)
+                if 0x795000 <= v < 0x7015900:
+                    out.add(v)
+        if depth > 0 and t.startswith("call 0x"):
+            out |= abs_writes(db, int(t[5:], 16), depth - 1, seen)
+    return out

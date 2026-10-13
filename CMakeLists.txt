@@ -22,6 +22,7 @@ add_library(dsound SHARED
   src/mod/util.cpp
   src/mod/splitscreen.cpp
   src/mod/loopback.cpp
+  src/mod/render.cpp
   src/mod/dsound_proxy.cpp
   src/mod/dsound.def)
 target_link_libraries(dsound PRIVATE minhook user32)

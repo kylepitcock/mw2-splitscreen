@@ -10,10 +10,13 @@ namespace ss
 	extern int g_live; // which local player's state currently occupies the engine globals
 
 	bool PlayerActive(int player);
+	// Player 1 always; extra players once fully in the match (CA_ACTIVE).
+	bool PlayerInGame(int player);
 	void SwitchTo(int player);
 
 	void InstallSplitscreen();
 	void InstallLoopback();
+	void InstallRendering();
 
 	// Loopback queues for players 1..3 (player 0 uses the engine's own).
 	void LoopbackQueue(int player, const void* data, int length);

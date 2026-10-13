@@ -92,6 +92,55 @@ namespace
 		oCom_Error(code, "%s", g_lastError);
 	}
 
+	// ------------------------------------------------------------ cgame init
+
+	constexpr int CG_BLOCK_COUNT = sizeof(cgameInitBlocks) / sizeof(cgameInitBlocks[0]);
+	constexpr uintptr_t cl_mapname = 0xB2F810; // char[64] set by CL_InitCGame
+	unsigned char* g_cgInit[CG_BLOCK_COUNT] = {};
+	char g_cgInitMap[64];
+	bool g_haveCgInit = false;
+
+	CL_InitCGame_t oCL_InitCGame;
+
+	void __cdecl hkCL_InitCGame(int localClientNum)
+	{
+		if (ss::g_live == 0)
+		{
+			oCL_InitCGame(localClientNum);
+			for (int b = 0; b < CG_BLOCK_COUNT; ++b)
+			{
+				if (!g_cgInit[b])
+					g_cgInit[b] = static_cast<unsigned char*>(
+						VirtualAlloc(nullptr, cgameInitBlocks[b].size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
+				std::memcpy(g_cgInit[b], reinterpret_cast<void*>(cgameInitBlocks[b].address), cgameInitBlocks[b].size);
+			}
+			std::memcpy(g_cgInitMap, reinterpret_cast<void*>(cl_mapname), sizeof(g_cgInitMap));
+			g_haveCgInit = true;
+			Log("captured cgame init state for %s", g_cgInitMap);
+			return;
+		}
+
+		if (!g_haveCgInit)
+		{
+			Log("player %d reached cgame init before player 1; skipped", ss::g_live + 1);
+			return;
+		}
+
+		// The client-state half of CL_InitCGame, with CG_Init replaced by player 1's fresh state.
+		At<int>(clientUIActive_connectionState) = CA_LOADING;
+		std::memcpy(reinterpret_cast<void*>(cl_mapname), g_cgInitMap, sizeof(g_cgInitMap));
+		At<bool>(clientUIActive_cgameInitCalled) = true;
+		At<unsigned char>(clc_flag876) = 0;
+		for (int b = 0; b < CG_BLOCK_COUNT; ++b)
+			std::memcpy(reinterpret_cast<void*>(cgameInitBlocks[b].address), g_cgInit[b], cgameInitBlocks[b].size);
+		At<int>(cgs_processedSnapshotNum) = At<int>(clc_serverMessageNum);
+		At<int>(cgs_serverCommandSequence) = At<int>(clc_serverCommandSequence);
+		At<int>(cg_clientNum) = At<int>(clc_clientNum);
+		At<bool>(clientUIActive_cgameInitialized) = true;
+		At<int>(clientUIActive_connectionState) = CA_PRIMED;
+		Log("player %d cgame initialised (client %d on %s)", ss::g_live + 1, At<int>(cg_clientNum), g_cgInitMap);
+	}
+
 	// ------------------------------------------------------------ frame driver
 
 	void PumpLoopback()
@@ -106,6 +155,57 @@ namespace
 
 	CL_Frame_t oCL_Frame;
 
+	// Sends what a menu button's `scriptMenuResponse` sends, for the live player
+	// (Script_ScriptMenuResponse: "cmd mr <serverId> <menu index> <response>").
+	bool ScriptMenuResponse(const char* menuName, const char* response)
+	{
+		for (int i = 0; i < 32; ++i)
+		{
+			const char* menu = CL_GetConfigString(CS_SCRIPT_MENUS + i);
+			if (!menu || std::strcmp(menu, menuName) != 0) continue;
+			char cmd[96];
+			sprintf_s(cmd, "cmd mr %i %i %s\n", At<int>(cl_serverId), i, response);
+			Cmd_ExecuteSingleCommand(0, 0, cmd);
+			return true;
+		}
+		return false;
+	}
+
+	// Until extra players have their own menus, answer the team and class menus
+	// the server opens for them when they join: auto-assign team, default class.
+	struct AutoJoin
+	{
+		int serverId = -1;
+		int step = 0;
+		int nextTime = 0;
+	};
+	AutoJoin g_autoJoin[MAX_SPLITSCREEN];
+
+	void AutoJoinMatch(int player)
+	{
+		AutoJoin& a = g_autoJoin[player];
+		int now = Sys_Milliseconds();
+		if (At<int>(clientUIActive_connectionState) != CA_ACTIVE)
+		{
+			a.step = 0;
+			a.nextTime = now + 1500;
+			return;
+		}
+		int serverId = At<int>(cl_serverId);
+		if (a.serverId != serverId)
+		{
+			a = AutoJoin{ serverId, 0, now + 1500 };
+		}
+		if (a.step >= 2 || now < a.nextTime) return;
+
+		if (a.step == 0 && ScriptMenuResponse("team_marinesopfor", "autoassign"))
+			Log("player %d: chose team (autoassign)", player + 1);
+		else if (a.step == 1 && ScriptMenuResponse("changeclass", "class0"))
+			Log("player %d: chose class (class0)", player + 1);
+		++a.step;
+		a.nextTime = now + 1500;
+	}
+
 	// Runs one engine client frame for an extra player. Returns false if it errored.
 	bool RunExtraFrame(int player)
 	{
@@ -113,8 +213,16 @@ namespace
 		g_inExtraFrame = true;
 		if (setjmp(g_extraFrameJmp) == 0)
 		{
+			static int lastState[MAX_SPLITSCREEN] = { -1, -1, -1, -1 };
+			int state = At<int>(clientUIActive_connectionState);
+			if (state != lastState[player])
+			{
+				Log("player %d connectionState %d -> %d", player + 1, lastState[player], state);
+				lastState[player] = state;
+			}
 			PumpLoopback();
 			oCL_Frame(0);
+			AutoJoinMatch(player);
 			g_inExtraFrame = false;
 			return true;
 		}
@@ -196,6 +304,13 @@ namespace
 		if (!g_autotestActiveSince) g_autotestActiveSince = now;
 		if (now - g_autotestActiveSince < 4000) return;
 
+		static int lastStatus = 0;
+		if (now - lastStatus > 8000)
+		{
+			lastStatus = now;
+			Cbuf_AddText(0, "status\n");
+		}
+
 		int count = 1;
 		for (int p = 1; p < MAX_SPLITSCREEN; ++p) count += g_players[p].active;
 		if (count < g_autotestPlayers)
@@ -263,7 +378,17 @@ namespace
 		ss::SwitchTo(p);
 		g_inExtraFrame = true;
 		if (setjmp(g_extraFrameJmp) == 0)
-			CL_ConnectToLocalServer();
+		{
+			// The client half of CL_ConnectToLocalServer. The engine version first runs
+			// CL_Disconnect, which resets global systems (sound listeners, UI) that
+			// player 1 is using, so it can't be used for extra players.
+			At<int>(clientUIActive_connectionState) = CA_CONNECTING; // getchallenge first: IW4x auth needs a challenge for this address
+			At<int>(clc_connectTime) = -3000;
+			At<int>(clc_qport) = At<int>(net_qport); // SwitchTo made it this player's own
+			At<unsigned char>(clc_flag875) = 0;
+			NET_StringToAdr("localhost", reinterpret_cast<netadr_t*>(clc_serverAddress));
+			CL_CheckForResend(0);
+		}
 		else
 			g_players[p].active = false;
 		g_inExtraFrame = false;
@@ -316,12 +441,30 @@ namespace ss
 		return player == 0 || (player > 0 && player < MAX_SPLITSCREEN && g_players[player].active);
 	}
 
+	bool PlayerInGame(int player)
+	{
+		if (player == 0) return true;
+		if (!PlayerActive(player)) return false;
+		if (player == g_live) return At<int>(clientUIActive_connectionState) == CA_ACTIVE;
+		// clientUIActive is block 0 of the saved state.
+		const unsigned char* saved = g_players[player].blocks[0];
+		return saved && *reinterpret_cast<const int*>(saved + (clientUIActive_connectionState - clientStateBlocks[0].address)) == CA_ACTIVE;
+	}
+
 	void SwitchTo(int player)
 	{
 		if (player == g_live) return;
 		if (!g_players[g_live].blocks[0] && !AllocBlocks(g_players[g_live].blocks)) return;
 		Save(g_players[g_live].blocks);
 		Load(g_players[player].blocks);
+
+		// net_qport is a process global, but the client netchan is set up from it
+		// (on connectResponse) and the server tells local clients apart by qport.
+		static int baseQport = -1;
+		if (g_live == 0) baseQport = At<int>(net_qport);
+		// Must stay a sign-extended short: the server compares it to MSG_ReadShort().
+		At<int>(net_qport) = player == 0 ? baseQport : static_cast<short>(baseQport + player * 0x2F1);
+
 		g_live = player;
 	}
 
@@ -329,6 +472,8 @@ namespace ss
 	{
 		Hook(CL_Frame, hkCL_Frame, &oCL_Frame);
 		Hook(0x4B22D0, hkCom_Error, &oCom_Error);
+		Hook(CL_InitCGame, hkCL_InitCGame, &oCL_InitCGame);
 		InstallLoopback();
+		InstallRendering();
 	}
 }

@@ -59,6 +59,15 @@ namespace game
 	using Cbuf_AddText_t = void(__cdecl*)(int localClientNum, const char* text);
 	inline auto Cbuf_AddText = reinterpret_cast<Cbuf_AddText_t>(0x404B20);
 
+	// Cmd_ExecuteSingleCommand(localClientNum, controllerIndex, text): runs a command now.
+	using Cmd_ExecuteSingleCommand_t = void(__cdecl*)(int localClientNum, int controller, const char* text);
+	inline auto Cmd_ExecuteSingleCommand = reinterpret_cast<Cmd_ExecuteSingleCommand_t>(0x609540);
+
+	using CL_GetConfigString_t = const char*(__cdecl*)(int index);
+	inline auto CL_GetConfigString = reinterpret_cast<CL_GetConfigString_t>(0x44ADB0);
+	constexpr int CS_SCRIPT_MENUS = 0x995; // 32 script menu names
+	constexpr uintptr_t cl_serverId = 0xAC0778;
+
 	using Sys_Milliseconds_t = int(__cdecl*)();
 	inline auto Sys_Milliseconds = reinterpret_cast<Sys_Milliseconds_t>(0x42A660);
 
@@ -76,6 +85,22 @@ namespace game
 	// Connects the running local client to "localhost" (what the engine does after a local server starts).
 	using CL_ConnectToLocalServer_t = void(__cdecl*)();
 	inline auto CL_ConnectToLocalServer = reinterpret_cast<CL_ConnectToLocalServer_t>(0x44A2A0);
+
+	using NET_StringToAdr_t = bool(__cdecl*)(const char* s, netadr_t* a);
+	inline auto NET_StringToAdr = reinterpret_cast<NET_StringToAdr_t>(0x409010);
+
+	// Sends getchallenge/connect while connecting (part of CL_Frame).
+	using CL_CheckForResend_t = void(__cdecl*)(int localClientNum);
+	inline auto CL_CheckForResend = reinterpret_cast<CL_CheckForResend_t>(0x41D010);
+
+	constexpr uintptr_t clc_qport = 0xA1E878;         // int, sent as "qport" in the connect string
+	constexpr uintptr_t clc_serverAddress = 0xA1E888; // netadr_t
+	constexpr uintptr_t clc_connectTime = 0xA1E89C;   // int
+	constexpr uintptr_t clc_flag875 = 0xA1E875;       // byte cleared on connect
+	constexpr uintptr_t net_qport = 0x1CDE614;        // int, random per process
+	constexpr int CA_CONNECTING = 3;
+	constexpr int CA_CHALLENGING = 4;
+	constexpr int CA_ACTIVE = 9;
 
 	using CL_Disconnect_t = void(__cdecl*)(int localClientNum);
 	inline auto CL_Disconnect = reinterpret_cast<CL_Disconnect_t>(0x403540);
@@ -113,14 +138,46 @@ namespace game
 		{ "cl_parseEntities", 0xAE7978, 0x40004 },
 		{ "clc", 0xA1E878, 0x615E8 },
 		{ "clc_flags", 0xA1E874, 4 },
+		{ "cl_serverId_gameState", 0xAC0778, 0x240B4 }, // serverId + configstrings (cleared on connect)
 		{ "cgs", 0x7ED3B8, 0x3BA4 },
 		{ "cg", 0x7F0F78, 0xFD540 },
 		{ "cg_entities", 0x8F3CA8, 0x102000 },
 		{ "cg_weapons", 0x7E3CC8, 0x9600 },
 		{ "cg_lc_1680", 0x7DEDB8, 0x1680 },
 		{ "cg_lc_28", 0x9F5D28, 0x28 },
-		{ "uiContext", 0x62E2858, 0x22FC },
+		// uiContext (0x62E2858) is NOT swapped: it holds pointers to menus that are
+		// reloaded with every map, so a stale copy crashes. Players share the UI for now.
 	};
+
+	// cgame state as left by CG_Init. Extra players start from a snapshot of player 1's
+	// freshly initialised cgame instead of running CG_Init, which also (re)initialises
+	// global client systems (physics, FX, sound, renderer registration) player 1 uses.
+	inline constexpr StateBlock cgameInitBlocks[] = {
+		{ "cgs", 0x7ED3B8, 0x3BA4 },
+		{ "cg", 0x7F0F78, 0xFD540 },
+		{ "cg_entities", 0x8F3CA8, 0x102000 },
+		{ "cg_weapons", 0x7E3CC8, 0x9600 },
+		{ "cg_lc_1680", 0x7DEDB8, 0x1680 },
+		{ "cg_lc_28", 0x9F5D28, 0x28 },
+	};
+
+	// CL_InitCGame(localClientNum)
+	using CL_InitCGame_t = void(__cdecl*)(int localClientNum);
+	constexpr uintptr_t CL_InitCGame = 0x423580;
+
+	// Per-client values CG_Init takes as arguments (read from clc) and where it stores them.
+	constexpr uintptr_t clc_serverMessageNum = 0xA3E9B4;
+	constexpr uintptr_t clc_serverCommandSequence = 0xA3E9BC;
+	constexpr uintptr_t clc_clientNum = 0xA1E87C;
+	constexpr uintptr_t cgs_processedSnapshotNum = 0x7ED3D0;
+	constexpr uintptr_t cgs_serverCommandSequence = 0x7ED3CC;
+	constexpr uintptr_t cg_clientNum = 0x7F42C8;
+
+	constexpr uintptr_t clientUIActive_cgameInitCalled = 0xB2BB8B; // bool
+	constexpr uintptr_t clientUIActive_cgameInitialized = 0xB2BB8A; // bool
+	constexpr uintptr_t clc_flag876 = 0xA1E876;                   // byte cleared before CG_Init
+	constexpr int CA_LOADING = 7;
+	constexpr int CA_PRIMED = 8;
 
 	constexpr uintptr_t clientUIActive_isRunning = 0xB2BB89; // bool
 	constexpr uintptr_t clientUIActive_connectionState = 0xB2C540;
